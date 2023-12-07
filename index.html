@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Server Sent Event test</title>
+</head>
+<body>
+  <div>
+    <button onClick="sseTest()">SSE Test START</button>
+    <div class="received-message"></div>
+  </div>
+  <script>
+    function sseTest() {
+      const maxRetryCount = 5;
+      let currentRetryCount = 0;
+
+      const eventSource = new EventSource("/ssetest", {
+        withCredentials: true
+      });
+      let dom = document.getElementsByClassName('received-message');
+
+      eventSource.addEventListener('open', (evt) => {
+        dom[0].innerHTML += '<div>-----===== CONNECTED =====-----<div>';
+        currentRetryCount = 0;
+        console.log(evt);
+      });
+
+      eventSource.addEventListener('timeUpdate', (evt) => {
+        console.log(evt);
+        dom[0].innerHTML += `<div>${evt.data}</div>`;
+      });
+
+      eventSource.addEventListener('error', (evt) => {
+        console.log(evt);
+        if(eventSource.readyState === EventSource.CLOSED) {
+          dom[0].innerHTML += '<div>Connection was closed by the server. error occurred.</div>';
+        } else if (eventSource.readyState === EventSource.CONNECTING) {
+          currentRetryCount++;
+          if (currentRetryCount > maxRetryCount) {
+            dom[0].innerHTML += '<div>Reach the maximum retry count.</div>';
+            eventSource.close();
+          } else {
+            dom[0].innerHTML += `<div>Reconnecting to the server... currentRetryCount: ${currentRetryCount}</div>`;
+          }
+        }
+      })
+    }
+  </script>
+</body>
+</html>
